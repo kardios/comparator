@@ -37,8 +37,7 @@ def extract_text_from_pdf(pdf_file):
     return text
 
 # --- Prompt Template for Document Comparison ---
-# This template provides instructions to the LLM on how to perform the comparison
-# and what aspects to focus on. It ensures consistency across different LLM calls.
+# This template now explicitly guides the LLM to generate a Markdown table.
 COMPARISON_PROMPT_TEMPLATE = """You are an expert document analyst tasked with comparing two provided documents.
 Your goal is to provide a comprehensive, structured, and consistent comparison.
 
@@ -49,44 +48,28 @@ Document 1:
 Document 2:
 {doc2_text}
 
-Please generate a comparison report that rigorously adheres to the following structure and guidelines:
+Provide your comparison report strictly as a Markdown table with the following headers and content for each aspect. Do not include any text before or after the table.
 
-## Document Comparison Report
+| Aspect                     | Document 1                               | Document 2                               |
+| :------------------------- | :--------------------------------------- | :--------------------------------------- |
+| **Main Topics/Themes** | [Concise summary of main topics/themes in Document 1] | [Concise summary of main topics/themes in Document 2] |
+| **Key Arguments/Points** | - [Key argument/point 1 from Document 1]             | - [Key argument/point 1 from Document 2]             |
+|                            | - [Key argument/point 2 from Document 1]             | - [Key argument/point 2 from Document 2]             |
+|                            | - [Add more points as needed, using bullet points for each] | - [Add more points as needed, using bullet points for each] |
+| **Similarities** | [List point 1 common to both documents]              | [List point 1 common to both documents]              |
+|                            | [List point 2 common to both documents]              | [List point 2 common to both documents]              |
+|                            | [Add more similarities as needed, each on a new line within the cell] | [Add more similarities as needed, each on a new line within the cell] |
+| **Differences/Discrepancies**| - [Difference 1 unique to Document 1]              | - [Difference 1 unique to Document 2]              |
+|                            | - [Difference 2 unique to Document 1]              | - [Difference 2 unique to Document 2]              |
+|                            | - [Add more differences as needed, using bullet points for each] | - [Add more differences as needed, using bullet points for each] |
+| **Overall Tone and Purpose**| [Describe the tone and primary purpose of Document 1.] | [Describe the tone and primary purpose of Document 2.] |
 
-### 1. Main Topics/Themes
-* **Document 1:** [Concise summary of main topics/themes in Document 1]
-* **Document 2:** [Concise summary of main topics/themes in Document 2]
-
-### 2. Key Arguments/Points
-* **Document 1:**
-    * [Key argument/point 1 from Document 1]
-    * [Key argument/point 2 from Document 1]
-    * [...]
-* **Document 2:**
-    * [Key argument/point 1 from Document 2]
-    * [Key argument/point 2 from Document 2]
-    * [...]
-
-### 3. Similarities
-* [Similarity 1 (e.g., shared concepts, facts, or conclusions)]
-* [Similarity 2 (e.g., common methodologies or perspectives)]
-* [...]
-
-### 4. Differences/Discrepancies
-* [Difference 1 (e.g., conflicting information, unique points, or opposing views)]
-* [Difference 2 (e.g., variations in scope, depth, or focus)]
-* [...]
-
-### 5. Overall Tone and Purpose
-* **Document 1:** [Describe the tone (e.g., formal, informal, objective, persuasive, critical) and primary purpose of Document 1.]
-* **Document 2:** [Describe the tone and primary purpose of Document 2.]
-
-**Guidelines for your response:**
-* Use Markdown headings (`##`, `###`) and bullet points (`*`) exactly as shown above.
-* Be concise and directly address each point. Avoid verbose introductions or conclusions outside the specified structure.
-* Do not include any conversational filler or meta-commentary.
-* If a section has no relevant content (e.g., no significant similarities), state that clearly (e.g., "No major similarities identified.").
-* Focus on extracting information directly from the provided text.
+**Instructions:**
+* Fill in each cell concisely and accurately based on the content of the documents.
+* For "Key Arguments/Points" and "Differences/Discrepancies," use bullet points (`-`) within the cell if there are multiple items.
+* For "Similarities," list each point on a new line within the cell if there are multiple.
+* If a specific aspect has no relevant information, state "N/A" or "None identified" in the respective cells.
+* Your entire response MUST be only this Markdown table.
 """
 
 # --- OpenAI LLM Integration Function for GPT-4.1 ---
