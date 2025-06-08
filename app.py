@@ -3,6 +3,7 @@ import fitz # PyMuPDF for robust PDF text extraction
 from openai import OpenAI # OpenAI library for LLM interaction
 from st_copy_to_clipboard import st_copy_to_clipboard # For convenient copying of results
 import os # Not directly used for secrets, but often useful for environment variables
+import time # Import the time module for measuring execution duration
 
 # --- Configuration for API Keys ---
 # API keys are securely loaded from Streamlit Secrets.
@@ -38,21 +39,54 @@ def extract_text_from_pdf(pdf_file):
 # --- Prompt Template for Document Comparison ---
 # This template provides instructions to the LLM on how to perform the comparison
 # and what aspects to focus on. It ensures consistency across different LLM calls.
-COMPARISON_PROMPT_TEMPLATE = """Compare the following two documents and highlight their key similarities and differences.
+COMPARISON_PROMPT_TEMPLATE = """You are an expert document analyst tasked with comparing two provided documents.
+Your goal is to provide a comprehensive, structured, and consistent comparison.
+
+Here are the two documents:
 Document 1:
 {doc1_text}
 
 Document 2:
 {doc2_text}
 
-Please provide a concise and clear comparison, focusing on:
-1.  **Main Topics/Themes:** What are the central subjects or ideas discussed in each document?
-2.  **Key Arguments/Points:** What are the most important arguments or specific points made in each document?
-3.  **Similarities:** What aspects, facts, or conclusions are common to both documents?
-4.  **Differences/Discrepancies:** What are the major differences, conflicting information, or unique points in each document?
-5.  **Overall Tone and Purpose:** How would you describe the tone (e.g., formal, informal, objective, persuasive) and the primary purpose of each document?
+Please generate a comparison report that rigorously adheres to the following structure and guidelines:
 
-Structure your comparison clearly with headings for each point.
+## Document Comparison Report
+
+### 1. Main Topics/Themes
+* **Document 1:** [Concise summary of main topics/themes in Document 1]
+* **Document 2:** [Concise summary of main topics/themes in Document 2]
+
+### 2. Key Arguments/Points
+* **Document 1:**
+    * [Key argument/point 1 from Document 1]
+    * [Key argument/point 2 from Document 1]
+    * [...]
+* **Document 2:**
+    * [Key argument/point 1 from Document 2]
+    * [Key argument/point 2 from Document 2]
+    * [...]
+
+### 3. Similarities
+* [Similarity 1 (e.g., shared concepts, facts, or conclusions)]
+* [Similarity 2 (e.g., common methodologies or perspectives)]
+* [...]
+
+### 4. Differences/Discrepancies
+* [Difference 1 (e.g., conflicting information, unique points, or opposing views)]
+* [Difference 2 (e.g., variations in scope, depth, or focus)]
+* [...]
+
+### 5. Overall Tone and Purpose
+* **Document 1:** [Describe the tone (e.g., formal, informal, objective, persuasive, critical) and primary purpose of Document 1.]
+* **Document 2:** [Describe the tone and primary purpose of Document 2.]
+
+**Guidelines for your response:**
+* Use Markdown headings (`##`, `###`) and bullet points (`*`) exactly as shown above.
+* Be concise and directly address each point. Avoid verbose introductions or conclusions outside the specified structure.
+* Do not include any conversational filler or meta-commentary.
+* If a section has no relevant content (e.g., no significant similarities), state that clearly (e.g., "No major similarities identified.").
+* Focus on extracting information directly from the provided text.
 """
 
 # --- OpenAI LLM Integration Function for GPT-4.1 ---
@@ -71,7 +105,7 @@ def get_gpt41_comparison(doc1_text, doc2_text, model_name="gpt-4.1"):
     # LLMs have a maximum input token limit (context window).
     # This value truncates the input documents if they exceed a certain size,
     # ensuring they fit within the LLM's context window. Adjust as needed.
-    max_tokens_per_doc = 60000 # Example: a high limit, actual model limits vary
+    max_tokens_per_doc = 100000 # Changed to 100000 as requested
 
     # Format the prompt with the extracted document texts.
     # Text is truncated here if it's too long, to avoid exceeding context limits.
@@ -105,7 +139,7 @@ def get_o3_comparison(doc1_text, doc2_text, model_name="o3"):
 
     client = OpenAI(api_key=openai_api_key)
 
-    max_tokens_per_doc = 60000
+    max_tokens_per_doc = 100000 # Changed to 100000 as requested
 
     prompt_content = COMPARISON_PROMPT_TEMPLATE.format(
         doc1_text=doc1_text[:max_tokens_per_doc],
@@ -215,6 +249,9 @@ if compare_button:
                     model_id = openai_models_for_selection[display_name]
                     with result_cols[i]: # Place the output in the appropriate column.
                         st.subheader(f"Comparison by {display_name}")
+                        
+                        start_time = time.time() # Start timer
+
                         with st.spinner(f"Running {display_name} comparison..."):
                             # Call the appropriate OpenAI comparison function based on the selected LLM.
                             if display_name == "gpt-4.1":
@@ -223,14 +260,19 @@ if compare_button:
                                 comparison_result = get_o3_comparison(doc1_text, doc2_text, model_name=model_id)
                             else:
                                 comparison_result = f"ERROR: Unrecognized LLM selected: {display_name}"
+                        
+                        end_time = time.time() # End timer
+                        duration = end_time - start_time # Calculate duration
 
-                            st.markdown(comparison_result) # Display the LLM's comparison output using Markdown.
+                        # Display the LLM's comparison output using Markdown.
+                        st.markdown(comparison_result) 
+                        st.info(f"Time taken: {duration:.2f} seconds") # Display the time taken
 
-                            # Add a "Copy to Clipboard" button below each result for user convenience.
-                            # The 'key' must be unique for each button instance.
-                            st_copy_to_clipboard(
-                                comparison_result,
-                                key=f"copy_{model_id.replace('.', '_').replace('-', '_')}"
-                            )
+                        # Add a "Copy to Clipboard" button below each result for user convenience.
+                        # The 'key' must be unique for each button instance.
+                        st_copy_to_clipboard(
+                            comparison_result,
+                            key=f"copy_{model_id.replace('.', '_').replace('-', '_')}"
+                        )
 
                 st.success("All selected comparisons complete! Please review the outputs above.")
